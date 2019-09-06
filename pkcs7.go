@@ -50,6 +50,7 @@ var (
 	oidSignedAndEnvelopedData = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 4}
 	oidDigestedData           = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 5}
 	oidEncryptedData          = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 6}
+	oidSpcIndirectData	  = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 311, 2, 1, 4}
 	oidAttributeContentType   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 3}
 	oidAttributeMessageDigest = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 4}
 	oidAttributeSigningTime   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 5}
@@ -165,15 +166,23 @@ func parseSignedData(data []byte) (*PKCS7, error) {
 			return nil, err
 		}
 	}
-	// Compound octet string
-	if compound.IsCompound {
-		if _, err = asn1.Unmarshal(compound.Bytes, &content); err != nil {
-			return nil, err
+
+	if sd.ContentInfo.ContentType.Equal(oidData) {
+		// Compound octet string
+		if compound.IsCompound {
+			if _, err = asn1.Unmarshal(compound.Bytes, &content); err != nil {
+				return nil, err
+			}
+		} else {
+			// assuming this is tag 04
+			content = compound.Bytes
 		}
-	} else {
-		// assuming this is tag 04
+	} else if sd.ContentInfo.ContentType.Equal(oidSpcIndirectData) {
 		content = compound.Bytes
+	} else {
+		return nil, fmt.Errorf("pkcs7: Unrecognized content type (%s)", sd.ContentInfo.ContentType)
 	}
+
 	return &PKCS7{
 		Content:      content,
 		Certificates: certs,
