@@ -97,6 +97,14 @@ func (p7 *PKCS7) GetOnlySigner() *x509.Certificate {
 	return getCertFromCertsByIssuerAndSerial(p7.Certificates, signer.IssuerAndSerialNumber)
 }
 
+// GetSigners returns an x509.Certificate for all signers of the signed data payload.
+func (p7 *PKCS7) GetSigners() (out []*x509.Certificate) {
+	for _, signer := range p7.Signers {
+		out = append(out, getCertFromCertsByIssuerAndSerial(p7.Certificates, signer.IssuerAndSerialNumber))
+	}
+	return
+}
+
 // UnmarshalSignedAttribute decodes a single attribute from the signer info
 func (p7 *PKCS7) UnmarshalSignedAttribute(attributeType asn1.ObjectIdentifier, out interface{}) error {
 	sd, ok := p7.raw.(signedData)
